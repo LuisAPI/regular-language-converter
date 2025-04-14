@@ -1,7 +1,10 @@
 from flask import Flask, request, jsonify
 import re
+from flask import send_from_directory
+from flask_cors import CORS  # Add CORS support
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates', static_folder='static')
+CORS(app)  # Enable CORS for all routes
 
 # Define the regular expression pattern based on your specification:
 # Breakdown of the pattern:
@@ -31,23 +34,56 @@ pattern = re.compile(
 
 @app.route('/validate', methods=['POST'])
 def validate():
-    # Expect a JSON payload with "input_string"
-    data = request.get_json()
-    input_string = data.get('input_string', '')
-    
-    # Check if the input string fully matches the regular expression.
-    if pattern.fullmatch(input_string):
-        result = {
-            'accepted': True,
-            'message': 'The string is accepted according to the regex.'
-        }
-        return jsonify(result), 200
-    else:
-        result = {
+    try:
+        # Expect a JSON payload with "input_string"
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'accepted': False,
+                'message': 'Invalid JSON payload'
+            }), 400
+            
+        input_string = data.get('input_string', '')
+        if not isinstance(input_string, str):
+            return jsonify({
+                'accepted': False,
+                'message': 'Input must be a string'
+            }), 400
+        
+        # Check if the input string fully matches the regular expression.
+        if pattern.fullmatch(input_string):
+            result = {
+                'accepted': True,
+                'message': 'The string is accepted according to the regex.'
+            }
+            return jsonify(result), 200
+        else:
+            result = {
+                'accepted': False,
+                'message': 'The string does not match the regex.'
+            }
+            return jsonify(result), 400
+    except Exception as e:
+        return jsonify({
             'accepted': False,
-            'message': 'The string does not match the regex.'
-        }
-        return jsonify(result), 400
+            'message': f'Error processing request: {str(e)}'
+        }), 500
+    
+@app.route('/')
+def index():
+    try:
+        return send_from_directory('static', 'index.html')
+    except Exception as e:
+        return f"Error: Could not serve index.html. {str(e)}", 500
 
 if __name__ == '__main__':
+    # Check if directories exist
+    import os
+    if not os.path.exists('static'):
+        os.makedirs('static')
+        print("Created missing 'static' directory")
+    if not os.path.exists('templates'):
+        os.makedirs('templates')
+        print("Created missing 'templates' directory")
+    
     app.run(debug=True)
