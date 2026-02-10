@@ -2,8 +2,13 @@
 install-deps:
 	pip install -r requirements.txt
 
-# Command to start the backend
-start-backend: install-deps
+# Command to start the backend with optional dependency installation
+# Usage: make start-backend DEPS=true
+start-backend:
+	@if [ "$(DEPS)" = "true" ]; then \
+		echo "Installing dependencies..."; \
+		pip install -r requirements.txt; \
+	fi
 	python Backend/app.py
 
 # Placeholder for starting the frontend
